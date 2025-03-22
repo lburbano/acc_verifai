@@ -1,0 +1,22 @@
+# See Documentation at - https://pre-commit.com/
+
+default_stages: [pre-commit, pre-merge-commit, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: check-yaml  # checks yaml files for parseable syntax.
+      - id: end-of-file-fixer # Ensures that files end with a newline
+      - id: mixed-line-ending # detect and use the most popular ending in the file
+        args: ['--fix=auto']
+      - id: check-added-large-files # check for files that are too large
+        args: ['--maxkb=500']
+      - id: name-tests-test # checks that pytest files are named .*_test\.py
+        exclude: test_utils\.py$
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.8
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry]
+name = "acc_verifai"
+version = "0.1.0"
+description = "RL and Data-Driven Discovery of Adversarial Vehicle Maneuvers"
+authors = ["Luis Burbano, Diego Ortiz, Prof. Alvaro Cardenas, Oliver Chang"]
+license = "Proprietary"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
+ruff = "^0.4.4"
+coverage = "^7.5.1"
+invoke = "^2.2.0"
+beautifulsoup4 = "^4.12.3"
+gymnasium = "^1.1.1"
+pre-commit = "^3.7.1"
+ipykernel = "^6.29.4"
+torch = {version = "^2.5.0+cu124", source = "pytorch_cuda"}
+torchaudio = {version = "^2.5.0+cu124", source = "pytorch_cuda"}
+torchvision = {version = "^0.20.0+cu124", source = "pytorch_cuda"}
+metadrive-simulator = {git = "https://github.com/metadriverse/metadrive.git", branch = "main"}
+numpy = "^1.26.4"
+pandas = "^2.2.2"
+matplotlib = "^3.9.0"
+seaborn = "^0.13.2"
+scenic = {git = "https://github.com/BerkeleyLearnVerify/Scenic.git", branch = "main"}
+scikit-image = "^0.23.2"
+stable-baselines3 = "^2.5.0"
+tensorboard = "^2.18.0"
+wandb = "^0.19.1"
+tyro = "^0.9.16"
+
+[[tool.poetry.source]]
+name = "pytorch_cuda"
+url = "https://download.pytorch.org/whl/cu124"
+priority = "explicit"
+
+[tool.coverage.run]
+branch = true
+omit = ["tests/conftest.py"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "skipci(reason): marks tests to skip in ci (deselect with '-m \"not skipci\"')",
+]
