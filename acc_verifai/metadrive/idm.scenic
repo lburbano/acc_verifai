@@ -3,6 +3,7 @@
 import math
 import numpy as np
 from metadrive.policy.idm_policy import IDMPolicy
+from controllers.lateral_control import LateralControl
 
 param map = localPath('../maps/Town06.xodr')
 param carla_map = 'Town06'
@@ -21,8 +22,6 @@ TERMINATE_TIME = 40 / globalParameters.time_step
 CAR3_SPEED = 20
 CAR4_SPEED = 20
 LEAD_CAR_SPEED = 20
-MODEL = "vehicle.tesla.model3"
-
 
 ############
 # Attack params
@@ -37,7 +36,7 @@ duty_cycle      = VerifaiRange(0, 1)
 
 ############
 
-inter_vehivle_disance = 60
+inter_vehivle_disance = VerifaiRange(30, 60)
 
 LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
 
@@ -52,13 +51,8 @@ LEADCAR_BRAKING_THRESHOLD = 6
 behavior CollisionAvoidance(safety_distance=10):
 	take SetBrakeAction(BRAKE_ACTION)
 
-#EGO BEHAVIOR: Follow lane, and brake after passing a threshold distance to the leading car
-behavior Attacker(id, dt, ego_speed, lane):
-	# TODO: implement with RL agent actions
-	take SetThrottleAction(0), SetBrakeAction(0)
-
 # CAR4 BEHAVIOR: Follow lane, and brake after passing a threshold distance to obstacle
-behavior Follower(id, vehicle_in_front):
+behavior Follower(id, vehicle_in_front, lane):
 	a = 23.0      # Maximum acceleration
 	b = 1.6       # Comfortable deceleration
 	v0 = 23.0     # Desired acceleration
@@ -66,6 +60,7 @@ behavior Follower(id, vehicle_in_front):
 	T = 1.5       # Safe time headway (s)
 	delta = 4  # Acceleration exponent
 	dt = 0.1
+	lat_control  = LateralControl(globalParameters.time_step)
 
 	while True:
 		# acceleration
@@ -80,34 +75,35 @@ behavior Follower(id, vehicle_in_front):
 		else:
 			throttle = 0
 			brake = min(-acceleration, 1)
-		print(f"throttle: {throttle}, brake: {brake}")
-		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(0)
+		s = lat_control.compute_control(self, lane)
+		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(s)
 
 #PLACEMENT
-# initLane = network.roads[0].forwardLanes.lanes[0]
-# spawnPt = initLane.centerline.pointAlongBy(SPAWN)
-start = (-100 @ -48.87)
+# initLane = network.roads[13].forwardLanes.lanes[0]
+# spawnPt = initLane.centerline.pointAlongBy(0)
+spawnPt = (-100 @ -48.87)
 
 id = 0
-ego = new Car at start,
-    with behavior Attacker(id, globalParameters.time_step, EGO_SPEED-5, start),
+ego = new Car at spawnPt
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
-	with behavior Follower(id, ego)
+	with behavior Follower(id, ego, spawnPt)
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 0),
-	with behavior Follower(id, c1)
+	with behavior Follower(id, c1, spawnPt)
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior Follower(id, c2)
+	with behavior Follower(id, c2, spawnPt)
 
 
 '''
 require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
-terminate when simulation().currentTime > TERMINATE_TIME
 '''
-terminate when (distance from ego to start) > 760
+terminate when (simulation().currentTime > TERMINATE_TIME) 
+terminate when (distance from ego to c1) < 4.5
+terminate when (distance from c1 to c2) < 4.5
+terminate when (distance from c2 to c3) < 4.5
