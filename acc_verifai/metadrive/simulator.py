@@ -198,7 +198,7 @@ class MetaDriveSimulation(DrivingSimulation):
 
         # Special handling for the ego vehicle
         ego_obj = self.scene.objects[0]
-        self.client.step(self.actions)  # Apply action in the simulator
+        self.client.step([0, self.actions[0]]) # Apply action in the simulator
         ego_obj._reset_control()
 
         # Render the scene in 2D if needed
@@ -222,40 +222,46 @@ class MetaDriveSimulation(DrivingSimulation):
             xv = obj.velocity[0]
             yv = obj.velocity[1]
             obs.append([x, y, xv, yv])
-        self.observation = np.array(obs)
+        self.observation = np.array(obs).astype(np.float32)
         return self.observation
 
     def get_info(self):
-        return None
+        return {}
     
     def get_reward(self):
-        if self.result:
-            positions = np.array(self.result.trajectory)
+        gap_attacker = (self.scene.objects[0].x - self.scene.objects[1].x) - 4.5
+        gap_platoon1 = (self.scene.objects[1].x - self.scene.objects[2].x) - 4.5
+        gap_platoon2 = (self.scene.objects[2].x - self.scene.objects[3].x) - 4.5
 
-            distances0 = positions[:, [0], :] - positions[:, [1], :]
-            distances1 = positions[:, [1], :] - positions[:, [2], :]
-            distances2 = positions[:, [2], :] - positions[:, [3], :]
+        attacker_crashed = gap_attacker < 0
+        platoon_crashed = gap_platoon1 < 0 or gap_platoon2 < 0
 
-            distances0 = np.linalg.norm(distances0, axis=2)
-            distances1 = np.linalg.norm(distances1, axis=2)
-            distances2 = np.linalg.norm(distances2, axis=2)
-            
-            rho0 = np.min(distances0) - 4.5
-            rho1 = np.min(distances1) - 4.5
-            rho2 = np.min(distances2) - 4.5
+        self.info['attacker_crashed'] = False
+        self.info['counter_example_found'] = False
+        self.info['distances'] = {
+            "gap_attacker": gap_attacker,
+            "gap_platoon1": gap_platoon1,
+            "gap_platoon2": gap_platoon2
+        }
 
-            min_distances = [rho0, rho1, rho2]
-            attacker = 0
-            dist_victims = []
-            for i in range(3):
-                if i != attacker:
-                    dist_victims.append(min_distances[i])
-            
-            rho_victims = min(dist_victims)
-            rho_attacker = min_distances[attacker] * (-1)
-            rho = max(rho_victims, rho_attacker)
-            return -rho
-        return 0
+        platoon_gap_reward = -0.01 * gap_platoon1 +  -0.01 * gap_platoon2
+
+        self.info["dense_reward_signals"] = {
+            "platoon_gap_reward": platoon_gap_reward,
+        }
+
+        reward = 0
+
+        # if attacker crashes, give negative reward
+        if attacker_crashed:
+            self.info['attacker_crashed'] = True
+            reward = -10 + platoon_gap_reward
+        # if any platoon member crashes and attacker is safe, give positive reward
+        elif platoon_crashed and not attacker_crashed:    
+            self.info['counter_example_found'] = True
+            reward = 10 + platoon_gap_reward
+
+        return reward
     
     def destroy(self):
         if self.client and self.client.engine:
