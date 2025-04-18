@@ -18,3 +18,4 @@
 
 - Take into account the variable `inter_vehicle_distance` in the scenario (`.scenic` file) to specify the setpoint distance, this gives the distance between the vehicles (remember that the distances are measured from the center of mass so in reality the bumper to bumper distance is x - 4.95)
 - Remember to change the variable `verifaiSampleType` in each scenario, our experiments have test `bo`(Bayesian Optimization)  and `ce` (Cross Entropy) as of Feb/2025
+- `git submodule update --init` to intialize and update Scenic submodule in you're using the Scenic Gym branch

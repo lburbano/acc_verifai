@@ -1,4 +1,3 @@
 [submodule "Scenic"]
 	path = Scenic
-	url = https://github.com/BerkeleyLearnVerify/Scenic.git
-	branch = Kai/ScenicGym-checkpoint
+	url = https://github.com/oliverc1623/Scenic.git
