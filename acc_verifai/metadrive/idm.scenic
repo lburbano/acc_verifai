@@ -9,16 +9,10 @@ param map = localPath('../maps/Town06.xodr')
 param carla_map = 'Town06'
 param time_step = 1.0/10
 model scenic.simulators.metadrive.model
-param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
+param verifaiSamplerType = 'halton' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
 
 #CONSTANTS
-TERMINATE_TIME = 20 / globalParameters.time_step
-
-# Parameters of the scenario.
-inter_vehivle_disance = 20 # Range(30, 60)
-
-# platoon placement 
-LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
+TERMINATE_TIME = 40 / globalParameters.time_step
 
 def not_zero(x: float, eps: float = 1e-2) -> float:
     if abs(x) > eps:
@@ -43,7 +37,7 @@ def get_vehicle_ahead(id, vehicle, lane):
 		d = abs(vehicle.position.x - obj.position.x) # (distance from vehicle.position to obj.position)
 		if vehicle == obj or d < 0.1:
 			continue
-		if lane != obj.lane:
+		if lane != obj._lane:
 			continue
 		if d < minDistance:
 			minDistance = d
@@ -65,7 +59,7 @@ def get_vehicle_behind(id, vehicle, lane):
 		d = abs(obj.position.x - vehicle.position.x)
 		if vehicle == obj or d < 0.1:
 			continue
-		if lane != obj.lane:
+		if lane != obj._lane:
 			continue
 		if d < minDistance:
 			minDistance = d
@@ -124,24 +118,27 @@ def idm_acc(agent, vehicle_in_front, acc_factor=1.0, deacc_factor=-2, target_spe
 	acceleration -= acc_factor * (speed_diff**2)
 	return acceleration
 
-behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.5):
+behavior IDM_MOBIL(id, politeness=0.25):
 	# IDM params
 	acc_factor = 1.0
-	deacc_factor = Range(-6,-4)
-	target_speed = 10 # Range(20, 22.5)
+	deacc_factor = Range(-3,-1)
+	target_speed = Range(20, 22.5)
 	distance_wanted = Range(1.0, 2.0)
-	time_wanted = 1.5 # Range(0.1, 1.5)
-	delta = 2 # Range(2, 6)
+	time_wanted = Range(0.1, 1.5)
+	delta = Range(2, 6)
 	lane_change_min_acc_gain = 1.0
+	safe_braking_limit = 1.0
 
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
 	_lon_controller_change, _lat_controller_change = simulation().getLaneChangingControllers(self)
 	past_steer_angle = 0
-	current_lane = self.lane
+	current_lane = self._lane
 	current_centerline = current_lane.centerline
 
 	while True:
 		current_lane = network.laneAt(self.position)
+		if current_lane is None:
+			break
 		current_centerline = current_lane.centerline
 
 		vehicle_front = get_vehicle_ahead(id, self, current_lane)
@@ -210,36 +207,34 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 
 behavior dummy_attacker():
 	while True:
-		take SetThrottleAction(0.3), SetBrakeAction(0.0), SetSteerAction(-0.3)
+		take SetThrottleAction(1.0), SetBrakeAction(0.0), SetSteerAction(0.0)
 
 #PLACEMENT
-ego_spawn_pt  = (100 @ -150)
-c1_spawn_pt = (100 @ -147)
+ego_spawn_pt  = (130 @ -150)
+victim_spawn_pt = (100 @ -150)
+num_vehicles_to_place = 6
+lane_width = 3.5
 
 id = 0
-ego = new Car at c1_spawn_pt
+ego = new Car on ego_spawn_pt, with velocity (15, 5)
 
-id = 1
-c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3) # TODO: double check with LaneChangeBehavior
+lane_group = network.laneGroupAt(victim_spawn_pt)
 
-id = 2
-c2 = new Car at c1.position offset by (C1_TO_C2, 4),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
-
-id = 3
-c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
-
-id = 4
-c4 = new Car at c1_spawn_pt offset by (-50, 0),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
+victim_vehicles = []
+for i in range(num_vehicles_to_place):
+	lane_i = Uniform(*lane_group.lanes)
+	c_i = new Car on lane_i, with behavior IDM_MOBIL(id, politeness=VerifaiRange(0,0.5)) 
+	victim_vehicles.append(c_i)
 
 '''
 require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
 terminate when (simulation().currentTime > TERMINATE_TIME)
-# terminate when (distance from ego to c1) < 4.5
+terminate when ego.metaDriveActor.crash_vehicle
+terminate when ego._lane == None
+terminate when any(v.metaDriveActor.crash_vehicle for v in victim_vehicles)
+
+
 # terminate when (distance from c1 to c2) < 4.5
 # terminate when (distance from c2 to c3) < 4.5

@@ -111,9 +111,9 @@ def worker_fn(worker_id: int, steps_per_worker: int, model_state_dict: dict, dat
     )
     env = ScenicGymEnv(
         scenario,
-        MetaDriveSimulator(timestep=0.1, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(1, 5)),
-        action_space=spaces.Box(low=-1, high=1, shape=(1,)),
+        MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 7)),
+        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
         max_steps=700,
     )
     obs_space_shape = env.observation_space.shape
@@ -277,8 +277,9 @@ def main() -> None:
     args = tyro.cli(Args)
 
     # Ensure model directory exists
-    if not pathlib.Path.exists(pathlib.Path(Args.model_dir)):
-        pathlib.Path.mkdir(pathlib.Path(Args.model_dir))
+    if not pathlib.Path.exists(pathlib.Path(args.model_dir)):
+        pathlib.Path.mkdir(pathlib.Path(args.model_dir))
+    print("Model directory:", args.model_dir)
 
     # Set the environment name based on the scenic file
     env_name = pathlib.Path(args.scenic_file).stem
@@ -304,8 +305,8 @@ def main() -> None:
     env = ScenicGymEnv(
         env_name,
         MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(1, 5)),
-        action_space=spaces.Box(low=-1, high=1, shape=(1,)),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 7)),
+        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
         max_steps=700,
     )
     obs_space_shape = env.observation_space.shape
@@ -420,7 +421,7 @@ def main() -> None:
         avg_reward = np.mean(episode_rewards) if episode_rewards else 0
         avg_length = np.mean(episode_lengths) if episode_lengths else 0
 
-        if update % 10 == 0 or update == 1:
+        if update % 1 == 0 or update == 1:
             logger.info(
                 "Update: %s/%s, Timesteps: %s/%s, FPS: %s, Episodes: %s, Avg Reward (Last 100): %.2f, Avg Length (Last 100): %.2f",
                 update,
@@ -433,12 +434,12 @@ def main() -> None:
                 avg_length,
             )
             # Save model every 10 updates
-            torch.save(model.state_dict(), f"models/ppo_{env_name}_model.pth")
+            torch.save(model.state_dict(), f"{args.model_dir}/ppo_{env_name}_model.pth")
 
     end_time = time.time()
     logger.info("Training finished in %.2f seconds.", end_time - start_time)
 
-    torch.save(model.state_dict(), f"models/ppo_{env_name}_model.pth")
+    torch.save(model.state_dict(), f"{args.model_dir}/ppo_{env_name}_model.pth")
     logger.info("Model saved to ppo_%s_model.pth", env_name)
 
 

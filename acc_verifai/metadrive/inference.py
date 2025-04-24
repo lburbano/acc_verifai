@@ -114,14 +114,14 @@ def run_inference() -> None:
         # Set real_time=True if you want it to run closer to real speed, False for faster sim
         sumo_map_path = pathlib.Path(args.sumo_map_path) if args.sumo_map_path else None
         simulator = MetaDriveSimulator(
-            timestep=0.1, sumo_map=sumo_map_path, render=True, real_time=False,
+            timestep=0.05, sumo_map=sumo_map_path, render=True, real_time=False,
         )
 
         # Define observation and action spaces explicitly matching training
         # TODO: It's safer to get these from the training args/config if possible
         # These values MUST match the ones used during training
-        obs_space = spaces.Box(low=-np.inf, high=np.inf, shape=(1, 5))
-        act_space = spaces.Box(low=-1, high=1, shape=(1,))
+        obs_space = spaces.Box(low=-np.inf, high=np.inf, shape=(5, 7))
+        act_space = spaces.Box(low=-1, high=1, shape=(2,))
 
         env = ScenicGymEnv(
             scenario,

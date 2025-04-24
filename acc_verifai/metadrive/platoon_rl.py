@@ -27,12 +27,12 @@ def main() -> None:
 
     env = ScenicGymEnv(
         scenario,
-        MetaDriveSimulator(timestep=0.1, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5,4)),
+        MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=True, real_time=False),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(7,5)),
         action_space=spaces.Box(low=-1, high=1, shape=(2,)),
         max_steps=700,
     )
-    env = Monitor(env, log_dir, info_keywords=("attacker_crashed", "counter_example_found", "dense_reward_signals"))
+    env = Monitor(env, log_dir)
 
     model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=200_000, progress_bar=True)
