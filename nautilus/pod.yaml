@@ -14,7 +14,8 @@ spec:
         cd ~ && \
         git clone https://github.com/oliverc1623/acc_verifai.git && cd acc_verifai && \
         chmod +x nautilus/setup.sh && ./nautilus/setup.sh && \
-        cd Scenic && git submodule update --init && 
+        cd Scenic && git submodule update --init && \
+        git pull origin main && \
         pip install -e . && cd .. &&\
         sleep infinity
     volumeMounts: 

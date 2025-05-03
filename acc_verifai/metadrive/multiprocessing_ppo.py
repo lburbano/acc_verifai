@@ -47,7 +47,7 @@ class Args:
     # Learning rate
     lr: float = 3e-4
     # Entropy coefficient for exploration bonus
-    entropy_coef: float = 0.0
+    entropy_coef: float = 0.01
     # Value function loss coefficient
     value_loss_coef: float = 0.5
     # Gradient clipping threshold
