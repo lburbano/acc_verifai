@@ -16,7 +16,6 @@ spec:
         chmod +x nautilus/setup.sh && ./nautilus/setup.sh && \
         cd Scenic && git submodule update --init && \
         git pull origin main && \
-        pip install -e . && cd .. &&\
         sleep infinity
     volumeMounts: 
     - mountPath: /pvcvolume
